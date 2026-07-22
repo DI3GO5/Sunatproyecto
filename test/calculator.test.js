@@ -1,0 +1,10 @@
+const test=require('node:test'),assert=require('node:assert/strict');const{calculate,progressiveTax}=require('../src/calculator');
+test('primera: compara alquiler anual con 6% del autovalúo',()=>{const r=calculate(1,{monthlyRent:1300,monthsReceived:12,assessedValue:200000,credits:780});assert.equal(r.grossIncome,15600);assert.equal(r.presumedGrossIncome,12000);assert.equal(r.minimumTax,600);assert.equal(r.calculatedTax,780);assert.equal(r.balance,0);assert.equal(r.comparisonApplied,false)});
+test('primera: regulariza cuando la renta presunta es mayor',()=>{const r=calculate(1,{monthlyRent:500,monthsReceived:12,assessedValue:200000,credits:300});assert.equal(r.grossIncome,6000);assert.equal(r.presumedGrossIncome,12000);assert.equal(r.calculatedTax,600);assert.equal(r.balance,300);assert.equal(r.comparisonApplied,true)});
+test('segunda actualiza el costo con ICM y aplica tasa efectiva de 5%',()=>{const r=calculate(2,{salePrice:210000,acquisitionCost:180000,correctionIndex:1.03});assert.equal(r.updatedCost,185400);assert.equal(r.capitalGain,24600);assert.equal(r.taxableIncome,19680);assert.equal(r.calculatedTax,1230);assert.equal(r.exempt,false)});
+test('segunda exonera casa habitación con al menos dos años',()=>{const r=calculate(2,{salePrice:210000,acquisitionCost:180000,correctionIndex:1.03,isSoleHome:1,ownershipYears:2});assert.equal(r.calculatedTax,0);assert.equal(r.exempt,true)});
+test('segunda exonera inmueble adquirido antes de 2004',()=>{const r=calculate(2,{salePrice:210000,acquisitionCost:100000,correctionIndex:1,acquiredBefore2004:1});assert.equal(r.calculatedTax,0);assert.equal(r.exempt,true)});
+test('escala progresiva 2026',()=>{const r=progressiveTax(107000);assert.equal(r.tax,13330);assert.equal(r.detail.length,2)});
+test('cuarta aplica 20%, 7 UIT y créditos',()=>{const r=calculate(4,{fourthIncome:100000,credits:1000});assert.equal(r.deduction20,20000);assert.equal(r.deduction7UIT,38500);assert.equal(r.calculatedTax,4160);assert.equal(r.balance,3160)});
+test('quinta sin renta imponible bajo 7 UIT',()=>{const r=calculate(5,{fifthIncome:30000});assert.equal(r.taxableIncome,0);assert.equal(r.calculatedTax,0)});
+

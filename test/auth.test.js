@@ -1,0 +1,4 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const{hashPassword,verifyPassword,newToken,hashToken}=require('../src/auth');
+test('contraseñas se guardan con scrypt y sal',async()=>{const hash=await hashPassword('ClaveSegura123');assert.match(hash,/^scrypt:/);assert.equal(await verifyPassword('ClaveSegura123',hash),true);assert.equal(await verifyPassword('incorrecta',hash),false)});
+test('tokens de sesión son aleatorios y se almacenan como hash',()=>{const a=newToken(),b=newToken();assert.notEqual(a,b);assert.equal(hashToken(a).length,64);assert.notEqual(hashToken(a),a)});

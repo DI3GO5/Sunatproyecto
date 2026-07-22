@@ -1,0 +1,6 @@
+
+> sunatproyecto@1.0.0 start
+> node src/server.js
+
+◇ injected env (4) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+Renta Clara: http://localhost:3000 (PostgreSQL)

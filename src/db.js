@@ -1,0 +1,14 @@
+const {Pool}=require('pg');
+const fs=require('fs'),path=require('path');
+let pool;
+function getPool(){if(!process.env.DATABASE_URL)return null;if(!pool)pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:false}:false});return pool}
+function requirePool(){const p=getPool();if(!p){const e=new Error('PostgreSQL no está configurado. Define DATABASE_URL en el archivo .env.');e.status=503;throw e}return p}
+async function initialize(){const p=getPool();if(!p)return false;await p.query(fs.readFileSync(path.join(__dirname,'..','db','schema.sql'),'utf8'));return true}
+async function createUser({fullName,email,passwordHash}){const p=requirePool();const{rows}=await p.query(`INSERT INTO users(full_name,email,password_hash) VALUES($1,LOWER($2),$3) RETURNING id,full_name AS "fullName",email,created_at AS "createdAt"`,[fullName,email,passwordHash]);return rows[0]}
+async function findUserByEmail(email){const p=requirePool();const{rows}=await p.query(`SELECT id,full_name AS "fullName",email,password_hash AS "passwordHash" FROM users WHERE LOWER(email)=LOWER($1)`,[email]);return rows[0]||null}
+async function createSession({userId,tokenHash,expiresAt}){const p=requirePool();await p.query(`DELETE FROM user_sessions WHERE expires_at<=NOW()`);await p.query(`INSERT INTO user_sessions(user_id,token_hash,expires_at) VALUES($1,$2,$3)`,[userId,tokenHash,expiresAt])}
+async function findUserBySession(tokenHash){const p=requirePool();const{rows}=await p.query(`SELECT u.id,u.full_name AS "fullName",u.email FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW()`,[tokenHash]);return rows[0]||null}
+async function deleteSession(tokenHash){const p=requirePool();await p.query(`DELETE FROM user_sessions WHERE token_hash=$1`,[tokenHash])}
+async function save(r){const p=requirePool();const q=`INSERT INTO calculations(user_id,taxpayer_name,document_number,category,tax_year,input_data,result_data) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,created_at AS "createdAt"`;const{rows}=await p.query(q,[r.userId,r.taxpayerName,r.documentNumber||null,r.category,r.taxYear,r.input,r.result]);return{...r,...rows[0]}}
+async function list(userId){const p=requirePool();const{rows}=await p.query(`SELECT id,taxpayer_name AS "taxpayerName",document_number AS "documentNumber",category,tax_year AS "taxYear",input_data AS input,result_data AS result,created_at AS "createdAt" FROM calculations WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,[userId]);return rows}
+module.exports={initialize,getPool,createUser,findUserByEmail,createSession,findUserBySession,deleteSession,save,list};

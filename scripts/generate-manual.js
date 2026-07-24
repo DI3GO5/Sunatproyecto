@@ -1,0 +1,118 @@
+﻿const fs=require('fs');
+const {Document,Packer,Paragraph,TextRun,HeadingLevel,AlignmentType,Table,TableRow,TableCell,WidthType,ShadingType,PageBreak,Header,Footer,PageNumber,BorderStyle}=require('docx');
+const navy='0B3041',teal='008E8B',light='E8F5F2',gray='5F747B',white='FFFFFF';
+const run=(text,opts={})=>new TextRun({text,font:'Aptos',size:22,color:opts.color||'172A32',bold:opts.bold||false,italics:opts.italics||false});
+const p=(text,opts={})=>new Paragraph({children:[run(text,opts)],spacing:{after:opts.after??150,line:300},alignment:opts.align});
+const title=text=>new Paragraph({text,heading:HeadingLevel.TITLE,alignment:AlignmentType.CENTER,spacing:{before:300,after:260}});
+const h1=text=>new Paragraph({text,heading:HeadingLevel.HEADING_1,spacing:{before:260,after:130}});
+const h2=text=>new Paragraph({text,heading:HeadingLevel.HEADING_2,spacing:{before:200,after:100}});
+const bullet=text=>new Paragraph({children:[run(text)],bullet:{level:0},spacing:{after:90,line:280}});
+const numbered=text=>new Paragraph({children:[run(text)],numbering:{reference:'steps',level:0},spacing:{after:110,line:280}});
+const note=text=>new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({children:[new TableCell({shading:{fill:light,type:ShadingType.CLEAR},margins:{top:170,bottom:170,left:190,right:190},children:[new Paragraph({children:[run('IMPORTANTE: ',{bold:true,color:teal}),run(text)],spacing:{after:0,line:280}})]})]})]});
+function table(headers,rows,widths){return new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({tableHeader:true,children:headers.map((x,i)=>new TableCell({width:{size:widths?.[i]||Math.floor(100/headers.length),type:WidthType.PERCENTAGE},shading:{fill:navy,type:ShadingType.CLEAR},margins:{top:100,bottom:100,left:110,right:110},children:[new Paragraph({children:[run(x,{bold:true,color:white})],spacing:{after:0}})]}))}),...rows.map(row=>new TableRow({children:row.map((x,i)=>new TableCell({shading:i===0?{fill:'F2F7F6',type:ShadingType.CLEAR}:undefined,margins:{top:90,bottom:90,left:110,right:110},children:[new Paragraph({children:[run(String(x),{bold:i===0})],spacing:{after:0,line:260}})]}))}))]})}
+const pageBreak=()=>new Paragraph({children:[new PageBreak()]});
+const children=[
+title('Manual de usuario — Renta Clara Perú'),
+new Paragraph({children:[run('Calculadora referencial del Impuesto a la Renta 2026',{bold:true,color:teal})],alignment:AlignmentType.CENTER,spacing:{after:160}}),
+p('Guía práctica para personas sin conocimientos previos de SUNAT', {align:AlignmentType.CENTER,color:gray}),
+p('Versión 1.0 · Julio de 2026',{align:AlignmentType.CENTER,color:gray}),
+note('El sistema orienta y estima. No presenta declaraciones ante SUNAT ni reemplaza la revisión de un contador cuando existen operaciones complejas, reparos tributarios, pérdidas de otros ejercicios o rentas del extranjero.'),
+p('Este manual explica qué información reunir, cómo elegir una categoría, cómo registrar importes anuales o mensuales y cómo leer el resultado.',{after:0}),
+pageBreak(),
+h1('1. ¿Qué hace el sistema?'),
+p('Renta Clara calcula de manera referencial el Impuesto a la Renta peruano del ejercicio 2026. Guarda cada consulta por usuario y muestra si el resultado es un saldo por pagar, un saldo a favor o si no existe saldo.'),
+h2('Conceptos básicos'),
+table(['Concepto','Explicación sencilla'],[
+['UIT','Unidad Impositiva Tributaria. Para 2026 se usa S/ 5,500. Sirve para fijar límites y tramos.'],
+['Renta bruta','El ingreso antes de aplicar deducciones.'],
+['Deducción','Monto permitido que reduce la renta usada para calcular el impuesto.'],
+['Renta imponible','Resultado final al que se aplica la tasa del impuesto.'],
+['Créditos','Retenciones o pagos a cuenta ya realizados. Se restan del impuesto calculado.'],
+['Saldo por pagar','El impuesto calculado es mayor que los créditos registrados.'],
+['Saldo a favor','Los créditos son mayores que el impuesto calculado.']],[25,75]),
+h2('¿Qué categoría elegir?'),
+table(['Categoría','Úsala cuando recibes ingresos por…'],[
+['Primera','Alquiler de inmuebles u otros bienes.'],['Segunda','Venta gravada de un inmueble.'],['Tercera','Un negocio o actividad empresarial en el Régimen General.'],['Cuarta','Servicios independientes y recibos por honorarios.'],['Quinta','Trabajo dependiente en planilla.']],[25,75]),
+pageBreak(),
+h1('2. Antes de comenzar'),
+p('Reúne tus comprobantes y constancias del año 2026. No calcules de memoria si puedes verificar los importes.'),
+bullet('Nombre o razón social y, de manera opcional, DNI o RUC.'),
+bullet('Ingresos del año o el detalle de cada mes.'),
+bullet('Retenciones y pagos a cuenta efectivamente realizados.'),
+bullet('Comprobantes de gastos, costos, donaciones e ITF que correspondan.'),
+bullet('Para tercera categoría: estados contables, adiciones, pérdidas compensables y coeficiente mensual, si aplica.'),
+h1('3. Ingreso y navegación'),
+numbered('Abre el sistema en el navegador.'),numbered('Selecciona “Regístrate” la primera vez, escribe tu nombre, correo y una contraseña de al menos 8 caracteres.'),numbered('En accesos posteriores, inicia sesión con tu correo y contraseña.'),numbered('En la columna “Tipo de renta”, selecciona la categoría que necesitas.'),numbered('Escribe el nombre del contribuyente y el documento, si deseas guardarlo.'),numbered('Completa los datos, pulsa “Calcular impuesto” y revisa el resultado.'),
+note('Si PostgreSQL no está configurado, el sistema no podrá crear usuarios ni guardar el historial. El administrador debe configurar la base de datos.'),
+pageBreak(),
+h1('4. Monto anual o detalle por mes'),
+p('En tercera, cuarta y quinta categoría aparecen dos botones: “Monto anual” y “Detalle por mes”. Ambos aplican la misma fórmula anual; cambia únicamente la forma de ingresar la información.'),
+h2('Opción A: Monto anual'),
+p('Úsala si ya tienes el total de enero a diciembre. Escribe directamente cada total anual y los pagos o retenciones acumulados.'),
+h2('Opción B: Detalle por mes'),
+p('Úsala si tienes boletas, recibos, libros o constancias separados por mes. Registra enero, febrero y así sucesivamente. Puedes dejar en cero los meses sin movimiento. La fila “Total” se actualiza automáticamente.'),
+numbered('Selecciona “Detalle por mes”.'),numbered('Escribe los importes en la fila del mes correspondiente.'),numbered('Revisa los totales que aparecen al final de la tabla.'),numbered('Completa los datos anuales complementarios debajo de la tabla.'),numbered('Pulsa “Calcular impuesto”.'),
+note('No dupliques datos: si eliges el detalle mensual, no vuelvas a sumar esos mismos ingresos en otro campo. El sistema suma los 12 meses automáticamente.'),
+pageBreak(),
+h1('5. Tercera categoría — negocios'),
+p('Este módulo corresponde al Régimen General y es referencial. La renta imponible anual se obtiene con los ingresos, costos, gastos, adiciones y pérdidas informados.'),
+h2('Fórmula anual'),
+p('Renta imponible = ingresos netos − costo de ventas − gastos deducibles + adiciones tributarias − pérdida compensable.'),
+p('Impuesto anual = renta imponible × 29.5%.'),
+p('Saldo = impuesto anual − pagos a cuenta registrados.'),
+h2('Pago a cuenta mensual referencial'),
+p('Para cada mes, el sistema compara: ingreso neto del mes × coeficiente, frente a ingreso neto del mes × 1.5%. Muestra como referencia el mayor importe.'),
+table(['Campo','Qué debes escribir'],[
+['Ingresos netos','Ventas o ingresos del negocio, sin devoluciones ni descuentos.'],['Costo de ventas','Costo asociado a los bienes o servicios vendidos.'],['Gastos deducibles','Gastos aceptados tributariamente y sustentados.'],['Adiciones','Gastos contables que no son aceptados para fines tributarios.'],['Pérdida compensable','Pérdida aplicable según el sistema de compensación elegido.'],['Coeficiente','Número decimal. Ejemplo: 1.8% se escribe 0.018.'],['Pagos a cuenta','Importes realmente pagados; no el valor referencial mostrado.']],[30,70]),
+note('La tasa de 29.5% no corresponde al Régimen MYPE Tributario, RER ni Nuevo RUS. Si tu empresa está en otro régimen, no uses este resultado como determinación final.'),
+pageBreak(),
+h1('6. Cuarta categoría — independientes'),
+p('Registra los recibos por honorarios o ingresos independientes y las retenciones o pagos a cuenta. En modo mensual, ambos se suman de enero a diciembre.'),
+h2('Fórmula resumida'),
+bullet('Se deduce 20% de la renta bruta de cuarta, con límite de 24 UIT.'),
+bullet('Luego se deducen hasta 7 UIT de las rentas del trabajo.'),
+bullet('Se pueden deducir gastos adicionales sustentados hasta 3 UIT.'),
+bullet('Después se consideran ITF, donaciones aceptadas y renta extranjera.'),
+bullet('A la renta imponible se aplican los tramos de 8%, 14%, 17%, 20% y 30%.'),
+table(['Tramo 2026','Tasa'],[['Primeras 5 UIT (hasta S/ 27,500)','8%'],['Más de 5 hasta 20 UIT','14%'],['Más de 20 hasta 35 UIT','17%'],['Más de 35 hasta 45 UIT','20%'],['Exceso de 45 UIT','30%']],[75,25]),
+h2('Ejemplo sencillo'),
+p('Si una persona registra S/ 10,000 cada mes, acumula S/ 120,000. El sistema deduce S/ 24,000 por el 20%, luego hasta S/ 38,500 por 7 UIT y aplica la escala progresiva al resultado restante. Finalmente resta las retenciones y pagos registrados.'),
+pageBreak(),
+h1('7. Quinta categoría — trabajadores en planilla'),
+p('Registra la remuneración bruta de cada mes y la retención que figura en tu boleta de pago. Incluye gratificaciones y otros conceptos gravados dentro del mes en que correspondan.'),
+h2('Fórmula resumida'),
+bullet('Se suman las rentas brutas de quinta categoría.'),
+bullet('No existe deducción del 20% para quinta categoría.'),
+bullet('Se deducen hasta 7 UIT y, si corresponde, gastos sustentados hasta 3 UIT.'),
+bullet('Luego se aplican los mismos tramos progresivos de 8%, 14%, 17%, 20% y 30%.'),
+bullet('Las retenciones del empleador se restan del impuesto calculado.'),
+note('Si tienes simultáneamente rentas de cuarta y quinta categoría, la determinación anual debe considerar ambas de forma conjunta. Los módulos separados son una orientación y pueden no reflejar por sí solos la obligación combinada.'),
+h1('8. Cómo leer el resultado'),
+table(['Resultado','Qué significa','Qué revisar'],[
+['Saldo por pagar','Falta cubrir una parte del impuesto.','Comprueba ingresos, créditos y deducciones antes de declarar.'],
+['Saldo a favor','Pagaste o te retuvieron más que el impuesto estimado.','Verifica si corresponde compensación o devolución.'],
+['Sin saldo','Impuesto y créditos coinciden, o no existe impuesto.','Confirma que no omitiste ingresos o retenciones.']],[22,38,40]),
+p('En “Ver resumen mensual” puedes comprobar los ingresos y pagos registrados por mes. En tercera categoría también aparece el pago mensual referencial.'),
+pageBreak(),
+h1('9. Errores frecuentes y cómo evitarlos'),
+bullet('Confundir 1.5% con 1.5: el coeficiente se escribe como decimal; por ejemplo, 1.5% es 0.015.'),
+bullet('Registrar montos mensuales y volver a sumarlos como totales anuales.'),
+bullet('Usar gastos sin comprobante o sin cumplir los requisitos de bancarización.'),
+bullet('Olvidar gratificaciones, bonos, retenciones o pagos a cuenta.'),
+bullet('Confundir saldo a favor con dinero devuelto automáticamente. La devolución requiere cumplir el procedimiento aplicable.'),
+bullet('Usar tercera categoría Régimen General para un negocio inscrito en otro régimen.'),
+bullet('Tomar el cálculo como una declaración presentada. El sistema no envía información a SUNAT.'),
+h1('10. Historial y privacidad'),
+p('Cada cálculo guardado aparece en “Historial reciente” con la categoría, fecha, contribuyente y saldo. Los registros se separan por cuenta. Cierra la sesión al terminar, especialmente en computadoras compartidas.'),
+h1('11. Lista de verificación final'),
+bullet('Elegí la categoría correcta.'),bullet('Usé importes del ejercicio 2026.'),bullet('No dupliqué ingresos mensuales y anuales.'),bullet('Verifiqué pagos a cuenta y retenciones con constancias.'),bullet('Solo incluí costos y gastos sustentados.'),bullet('Leí el detalle de deducciones y tramos.'),bullet('Buscaré apoyo profesional si mi caso tiene operaciones complejas.'),
+pageBreak(),
+h1('12. Base de cálculo y alcance'),
+p('El sistema usa la UIT 2026 de S/ 5,500. Para rentas del trabajo utiliza la deducción anual de 7 UIT, la deducción adicional de hasta 3 UIT y la escala progresiva acumulativa de 8%, 14%, 17%, 20% y 30%. Para el Régimen General de tercera categoría usa 29.5% anual y el pago a cuenta mensual mayor entre coeficiente y 1.5%.'),
+p('Fuentes de orientación verificadas: portal SUNAT sobre UIT; portal SUNAT Emprender sobre Régimen General; orientación del Estado peruano sobre gastos deducibles de hasta 3 UIT; y documento CATEGORIASSUNAT.pdf entregado con el proyecto.'),
+note('Las normas, criterios y formularios pueden cambiar. Antes de presentar una declaración, contrasta el resultado con la información vigente de SUNAT y con tus documentos reales.'),
+h2('Soporte técnico básico'),
+p('Si la página no carga, confirma que el servidor esté iniciado. Si no puedes registrarte o no aparece el historial, solicita al administrador revisar la conexión a PostgreSQL. Si el cálculo parece incorrecto, revisa primero la categoría, el modo anual/mensual y los importes ingresados.')
+];
+const doc=new Document({styles:{default:{document:{run:{font:'Aptos',size:22,color:'172A32'},paragraph:{spacing:{line:300}}}},paragraphStyles:[{id:'Title',name:'Title',basedOn:'Normal',next:'Normal',quickFormat:true,run:{font:'Aptos Display',size:48,bold:true,color:navy}},{id:'Heading1',name:'Heading 1',basedOn:'Normal',next:'Normal',quickFormat:true,run:{font:'Aptos Display',size:32,bold:true,color:navy}},{id:'Heading2',name:'Heading 2',basedOn:'Normal',next:'Normal',quickFormat:true,run:{font:'Aptos Display',size:25,bold:true,color:teal}}]},numbering:{config:[{reference:'steps',levels:[{level:0,format:'decimal',text:'%1.',alignment:AlignmentType.START,style:{paragraph:{indent:{left:540,hanging:300}}}}]}]},sections:[{properties:{page:{margin:{top:1100,right:1000,bottom:1000,left:1000}}},headers:{default:new Header({children:[new Paragraph({children:[run('RENTA CLARA PERÚ · MANUAL 2026',{bold:true,color:teal})],alignment:AlignmentType.RIGHT})]})},footers:{default:new Footer({children:[new Paragraph({children:[run('Manual de usuario  |  Página ',{color:gray}),new TextRun({children:[PageNumber.CURRENT],font:'Aptos',size:20,color:gray})],alignment:AlignmentType.CENTER})]})},children}]});
+Packer.toBuffer(doc).then(buffer=>{fs.writeFileSync('Manual_Renta_Clara_2026.docx',buffer);console.log(`Manual generado: ${buffer.length} bytes`)}).catch(e=>{console.error(e);process.exit(1)});
